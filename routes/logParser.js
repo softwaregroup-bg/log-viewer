@@ -10,7 +10,8 @@ var analyzer = function (logPath) {
 
     this.path.forEach(function (path) {
       fs.readdirSync(path).forEach(function (file) {
-        self.analyze(file,path);
+        if(file != 'log.txt')
+          self.analyze(file,path);
       });
     });
     return this.logs;
@@ -31,13 +32,27 @@ var parser = function (logs) {
   var self    = this;
   this.templates = {
     "undertree":function (data) {
-      var data = data.replace(/\\t/ig,"\t")
-        .replace(/\\r/ig,'')
+      data = data
         .replace(/\&lt\;/ig,'<')
         .replace(/\&quot\;/ig,'"')
-        .replace(/\&#39\;/ig,'\'')
-        .replace(/\\n/ig,"\n");
-      console.log(data);
+        .replace(/\&#39\;/ig,'\'');
+      var partial = data.match(/([^\t]+)/ig);
+      var eventTime = partial[1];
+      var detailsData = [];
+
+      for (var i = 2 ; i < partial.length; i++) {
+        if(partial[i]){
+          var tmp = partial[i]
+            .replace(/\\t/ig,"\t")
+            .replace(/\\r/ig,'')
+            .replace(/\\n/ig,"\n");
+          detailsData.push(tmp);
+        }
+      };
+      return {
+        "eventTime":eventTime,
+        "detailsData":detailsData
+      };
     }
   };
 
@@ -48,8 +63,12 @@ var parser = function (logs) {
       })
     }
   };
+  this.getLastReadLine = function (file) {
+    if(!fs.existsSync(file))
+  };
   this.parseFile = function () {
     var template = self.templates[this.name];
+    var getLastReadLine = self.getLastReadLine(this.file.path+this.file.name);
 
     if(template){
       var Lazy = new lazy(fs.createReadStream(this.file.path+this.file.name))
