@@ -10,7 +10,7 @@ var analyzer = function (logPath) {
 
     this.path.forEach(function (path) {
       fs.readdirSync(path).forEach(function (file) {
-        if(file != 'log.txt')
+        if(file != 'log_db')
           self.analyze(file,path);
       });
     });
@@ -28,8 +28,10 @@ var analyzer = function (logPath) {
 };
 
 var parser = function (logs) {
-  this.logs   = logs || [];
   var self    = this;
+  this.logs   = logs || [];
+  this.logPath = 'log_db/';
+
   this.templates = {
     "undertree":function (data) {
       data = data
@@ -63,19 +65,45 @@ var parser = function (logs) {
       })
     }
   };
-  this.getLastReadLine = function (file) {
-    if(!fs.existsSync(file))
+  this.getLastReadLine = function (fileInfo) {
+    var logPath = fileInfo.path+self.logPath;
+    var logFile = fileInfo.path+self.logPath+fileInfo.name;
+    var lastLinrRead = 0;
+    if(!fs.existsSync(logPath)){
+      fs.mkdirSync(logPath, '0777');
+    }
+    if(!fs.existsSync(logFile)){
+      fs.open(logFile, 'w', 0777, function (err,fd) {
+        fs.close(fd);
+      });
+    } else {
+      var _data = '';
+      var Lazy = new lazy(fs.createReadStream(logFile))
+      .lines
+      .forEach(function (line) {
+        _data = _data+line.toString();
+      });
+      lastLinrRead = parseInt(_data.trim());
+    }
+    return lastLinrRead;
   };
   this.parseFile = function () {
+    var _file = this;
     var template = self.templates[this.name];
-    var getLastReadLine = self.getLastReadLine(this.file.path+this.file.name);
+    var getLastReadLine = self.getLastReadLine(this.file);
 
     if(template){
+      var lastLine = 0;
       var Lazy = new lazy(fs.createReadStream(this.file.path+this.file.name))
       .lines
       .forEach(function (line) {
+        lastLine++;
         template(line.toString());
       });
+      Lazy.on('pipe',function () {
+        // self.logPath
+        fs.writeFileSync(_file.file.path+self.logPath+_file.file.name,lastLine,{'flag':'w'});
+      })
     }
   }
 };
