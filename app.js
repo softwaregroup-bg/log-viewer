@@ -5,7 +5,7 @@
 
 var express = require('express');
 var routes = require('./routes');
-var logParser = require('./routes/logParser');
+var logParser = require('./lib/logParser');
 var error = require('./routes/error');
 // var user = require('./routes/user');
 var http = require('http');
@@ -33,8 +33,8 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/', routes.index);
-app.get('/logParser', logParser.create);
 
+logParser.create();
 http.createServer(app).listen(app.get('port'), function(){
   var env = (app.get('env')?app.get('env'):'live')
   console.log('Express server{'+env+'} listening on port ' + app.get('port'));
